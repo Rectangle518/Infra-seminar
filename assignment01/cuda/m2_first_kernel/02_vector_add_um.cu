@@ -17,6 +17,8 @@ __global__ void vectorAdd(const float *a, const float *b, float *c, int n) {
     if (idx < n) c[idx] = a[idx] + b[idx];
 }
 
+/*
+
 int main() {
     const int n = 1 << 24;  // 16M 元素
     size_t bytes = (size_t)n * sizeof(float);
@@ -67,3 +69,71 @@ int main() {
     REPORT(fabs(got - want) <= 1e-3 * (1.0 + fabs(want)));
     return 0;
 }
+
+*/
+
+/*
+
+NVIDIA GeForce RTX 4060 Laptop GPU
+
+改动之前：
+
+./bin/m2_first_kernel/02_vector_add_um
+搬运 + kernel + 读回: 63.8 ms
+PASS
+
+*/
+
+int main() {
+
+    const int n = 1 << 24;  // 16M 元素
+    size_t bytes = (size_t)n * sizeof(float);
+
+    CUDA_CHECK(cudaFree(0));
+
+    float *a, *b, *c;
+    CUDA_CHECK(cudaMallocManaged(&a, bytes));
+    CUDA_CHECK(cudaMallocManaged(&b, bytes));
+    CUDA_CHECK(cudaMallocManaged(&c, bytes));
+
+    fill_random(a, n, 1);
+    fill_random(b, n, 2);
+
+    double want = 0;
+    for (int i = 0; i < n; i++) want += (double)(a[i] + b[i]);
+
+    int threads = 256;
+    int blocks = (n + threads - 1) / threads;
+
+    // ================= 计时窗口开始 =================
+    auto t0 = std::chrono::steady_clock::now();
+
+    vectorAdd<<<blocks, threads>>>(a, b, c, n);
+    CUDA_CHECK_KERNEL();
+
+    cudaDeviceSynchronize();  // 确保 kernel 执行完毕
+
+    double got = 0;
+    for (int i = 0; i < n; i++) got += (double)c[i];
+
+    auto t1 = std::chrono::steady_clock::now();
+    // ================= 计时窗口结束 =================
+
+    printf("kernel + 读回: %.1f ms\n",
+           std::chrono::duration<double, std::milli>(t1 - t0).count());
+
+    REPORT(fabs(got - want) <= 1e-3 * (1.0 + fabs(want)));
+    return 0;
+}
+
+/*
+
+NVIDIA GeForce RTX 4060 Laptop GPU
+
+改动之后：
+
+./bin/m2_first_kernel/02_vector_add_um
+搬运 + kernel + 读回: 42.8 ms
+PASS
+
+*/
