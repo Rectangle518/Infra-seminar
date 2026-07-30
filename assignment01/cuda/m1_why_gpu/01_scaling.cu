@@ -82,3 +82,16 @@ int main() {
     REPORT(1);
     return 0;
 }
+
+/*
+
+NVIDIA GeForce RTX 4060 Laptop GPU
+
+./bin/m1_why_gpu/01_scaling
+CPU 单线程      :      2.713 ms  (  0.65 ns/元素)
+GPU <<<1, 1>>>  :    226.316 ms  ( 53.96 ns/元素)
+GPU <<<1, 256>>>:      5.064 ms  (  1.21 ns/元素)
+GPU 铺满 grid   :      0.332 ms  (  0.08 ns/元素, 16384 blocks x 256 threads)
+PASS
+
+*/
